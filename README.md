@@ -13,6 +13,7 @@ git clone https://github.com/k4yt3x/rcping.git
 cd rcping
 cargo build --release
 cargo install --path .
+strip $(which rcping)
 ```
 
 rcping requires the CAP_NET_RAW capability to be ran as a non-root user.
