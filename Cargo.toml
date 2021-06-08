@@ -1,0 +1,12 @@
+[package]
+name = "rcping"
+version = "1.0.0"
+edition = "2018"
+
+[dependencies]
+ansi_term = "0.12"
+clap = "2"
+fastping-rs = "0.2"
+nix = "0.21"
+slog = "2.7"
+slog-term = "2.8"
