@@ -146,10 +146,6 @@ fn main() {
     if let Some(final_min) = min {
         if let Some(final_max) = max {
             if seq > 0 && transmitted > 0 {
-                // reinitialize the logger since it cannot be copied
-                let decorator = slog_term::TermDecorator::new().build();
-                let drain = Mutex::new(slog_term::FullFormat::new(decorator).build()).fuse();
-                let log = slog::Logger::root(drain, o!());
                 info!(
                     log,
                     "{}",
@@ -176,10 +172,6 @@ fn main() {
                     ))
                 );
             }
-        } else {
-            std::process::exit(0)
         }
-    } else {
-        std::process::exit(0)
     }
 }
