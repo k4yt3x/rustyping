@@ -22,6 +22,14 @@ rustyping's binary will be installed to Cargo's binary directory (e.g., `~/.carg
 sudo setcap cap_net_raw=+eip $(which rp)
 ```
 
+## Unrestricted Mode
+
+By default, non-root users can send pings at a minimal interval of 200ms or 0.2s. This is to prevent normal users from being able to cause ICMP floods. If you wish to disable this safety feature, you can compile rustyping with the `unrestricted` feature.
+
+```shell
+cargo build --release --features unrestricted
+```
+
 ## Usages
 
 You can see the usages using the `-h/--help` switch.

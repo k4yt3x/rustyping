@@ -206,7 +206,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // check if flooding is possible
-    if interval < 0.2 && nix::unistd::getuid().as_raw() != 0 {
+    if (interval < 0.2 && nix::unistd::getuid().as_raw() != 0) && !cfg!(feature = "unrestricted") {
         warn!(
             log,
             "cannot flood; minimal interval allowed for user is 200ms"
