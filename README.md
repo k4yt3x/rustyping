@@ -6,7 +6,7 @@ A prettier lightweight ping utility written in Rust.
 
 ## Installation
 
-You can either download the latest release from the [releases](https://github.com/k4yt3x/rustyping/releases) page or compile it yourself. You will need `cargo` for the compilation.
+You can either download the latest release from the [releases](https://github.com/k4yt3x/rustyping/releases) page or compile it yourself. You will need `cargo` for the compilation. Currently, rustyping only support UNIX platforms (Linux and macOS). If you want it to be supported on other platforms, open an issue.
 
 ```shell
 git clone https://github.com/k4yt3x/rustyping.git
