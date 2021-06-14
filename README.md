@@ -1,6 +1,6 @@
 # rustyping
 
-A prettier lightweight ping utility written in Rust.
+A prettier lightweight colored ping utility written in Rust.
 
 ![screenshot](https://user-images.githubusercontent.com/21986859/121847661-ebf8d700-ccb6-11eb-84e0-e33528d0ca2a.png)
 
