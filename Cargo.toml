@@ -1,7 +1,16 @@
+cargo-features = ["strip"]
+
 [package]
-name = "rp"
+name = "rustyping"
 version = "2.0.0"
 edition = "2018"
+
+[[bin]]
+name = "rp"
+path = "src/main.rs"
+
+[profile.release]
+strip = "symbols"
 
 [dependencies]
 ansi_term = "0.12"
