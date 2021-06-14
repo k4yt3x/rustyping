@@ -24,15 +24,20 @@ use std::time::{Duration, Instant};
 /// use ansi_term to color the rtt value and returns
 ///   the colored value as a string
 fn paint_rtt(rtt: u128) -> String {
+    // calculate hue value from latency
+    // 0ms == 0° (green), 100ms == 100° (red)
     let hue = (100.0 - rtt as f64 / (1000.0 * 100.0) * 100.0) as f64;
     let hsl = HSL {
         h: if hue < 0.0 { 0.0 } else { hue },
         s: 1.0,
         l: 0.5,
     };
+
+    // convert HSL color space into RGB
     let (red, green, blue) = hsl.to_rgb();
     let color = Color::RGB(red, green, blue);
 
+    // if RTT is less than 1ms, show three digits after the decimal point
     if rtt < 1000 {
         color
             .paint(format!("{:.5}", (rtt as f64 / 1000.0).to_string()))
@@ -42,6 +47,8 @@ fn paint_rtt(rtt: u128) -> String {
     }
 }
 
+/// send ICMP/ICMPv6 echo request to an address and return the RTT if a response is received
+/// if no responses are received, return Ok(None)
 fn ping(
     address: IpAddr,
     timeout: f64,
@@ -54,7 +61,7 @@ fn ping(
     let mut sender: TransportSender;
     let mut receiver: TransportReceiver;
 
-    // construct packet content
+    // if the target address is an IPv4 address
     if address.is_ipv4() {
         let mut packet =
             echo_request::MutableEchoRequestPacket::new(&mut packet_buffer[..]).unwrap();
@@ -65,6 +72,8 @@ fn ping(
         (sender, receiver) =
             transport_channel(size, Layer4(Ipv4(IpNextHeaderProtocols::Icmp))).unwrap();
         sender.send_to(packet, address).unwrap();
+
+    // if the target address is an IPv6 address
     } else {
         let mut packet = MutableIcmpv6Packet::new(&mut packet_buffer[..]).unwrap();
         packet.set_icmpv6_type(Icmpv6Types::EchoRequest);
@@ -73,9 +82,11 @@ fn ping(
         sender.send_to(packet, address).unwrap();
     }
 
+    // start timer
     let sent_time = Instant::now();
     let mut loop_timeout = Duration::from_secs_f64(timeout);
 
+    // ICMP
     if address.is_ipv4() {
         let mut receiver_iterator = icmp_packet_iter(&mut receiver);
         loop {
@@ -106,6 +117,8 @@ fn ping(
                 }
             }
 
+            // if the amount of time elapsed has yet exceeded the specified timeout
+            // set (timeout = timeout - elapsed time) and listen for another packet
             if Instant::now().duration_since(sent_time) > Duration::from_secs_f64(timeout) {
                 return Ok(None);
             } else {
@@ -113,6 +126,8 @@ fn ping(
                     Duration::from_secs_f64(timeout) - Instant::now().duration_since(sent_time)
             }
         }
+
+    // ICMPv6
     } else {
         let mut receiver_iterator = icmpv6_packet_iter(&mut receiver);
         loop {
@@ -146,7 +161,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let log = slog::Logger::root(drain, o!());
 
     // parse command line arguments
-    let matches = clap::App::new("rustping")
+    let matches = clap::App::new("rustyping")
         .version("0.1.0")
         .author("K4YT3X <k4yt3x@k4yt3x.com>")
         .about("A prettier ping utility written in Rust")
@@ -186,11 +201,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .get_matches();
 
+    // assign command line values to variables
     let destination = matches.value_of("destination").unwrap();
     let count = value_t_or_exit!(matches.value_of("count"), u16);
     let mut interval = value_t_or_exit!(matches.value_of("interval"), f64);
     let timeout = value_t_or_exit!(matches.value_of("timeout"), f64);
 
+    // check if destination is a valid IP address
     let address = match destination.parse::<IpAddr>() {
         // address is valid, use this address
         Ok(address) => address,
@@ -215,6 +232,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         interval = 0.2
     }
 
+    // declare/initialize metric variables for the ping summary
     let identifier = random::<u16>();
     let mut sequence: u16 = 0;
     let mut total_rtt = Duration::new(0, 0);
@@ -223,16 +241,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut min: Option<Duration> = None;
     let mut max: Option<Duration> = None;
 
+    // an atomic boolean value that acts as the running flag
+    // this is used to stop the ping cycle when ^C is pressed
     let running = Arc::new(AtomicBool::new(true));
     let running_clone = running.clone();
 
+    // upon receiving ^C, set running to false
     ctrlc::set_handler(move || {
         running_clone.store(false, Ordering::SeqCst);
     })
     .expect("error setting Ctrl-C handler");
 
+    // keep sending pings until ^C is pressed or count is reached
     while running.load(Ordering::SeqCst) && (count == 0 || sequence < count) {
+        // this timer is used to calculate interval
         let cycle_begin_time = Instant::now();
+
+        // send one echo request and get the RTT value
         let rtt = ping(address, timeout, 64, sequence, identifier).unwrap();
 
         match rtt {
@@ -260,8 +285,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     max = Some(rtt)
                 }
 
-                total_rtt += rtt;
-
                 info!(
                     log,
                     "answer from {} seq={} rtt={}ms",
@@ -269,12 +292,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     sequence,
                     paint_rtt(rtt.as_micros())
                 );
+
+                total_rtt += rtt;
                 received += 1;
             }
         }
         transmitted += 1;
         sequence += 1;
 
+        // if current time - elapsed time < interval, wait until interval is reached
         if Instant::now().duration_since(cycle_begin_time) < Duration::from_secs_f64(interval) {
             thread::sleep(
                 Duration::from_secs_f64(interval) - Instant::now().duration_since(cycle_begin_time),
