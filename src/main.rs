@@ -188,7 +188,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let destination = matches.value_of("destination").unwrap();
     let count = value_t_or_exit!(matches.value_of("count"), u16);
-    let interval = value_t_or_exit!(matches.value_of("interval"), f64);
+    let mut interval = value_t_or_exit!(matches.value_of("interval"), f64);
     let timeout = value_t_or_exit!(matches.value_of("timeout"), f64);
 
     let address = match destination.parse::<IpAddr>() {
@@ -211,7 +211,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             log,
             "cannot flood; minimal interval allowed for user is 200ms"
         );
-        warn!(log, "interval will be set to 200ms")
+        warn!(log, "interval will be set to 200ms");
+        interval = 0.2
     }
 
     let identifier = random::<u16>();
