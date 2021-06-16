@@ -22,7 +22,7 @@ cargo install --path .
 strip $(which rp)
 ```
 
-rustyping's binary will be installed to Cargo's binary directory (e.g., `~/.cargo/bin/rp`). You can use the command `rp` to launch rustyping. Note that programs on Linus require the CAP_NET_RAW capability to be able to open raw sockets as an non-root user. The command below gives rustyping's binary this capability.
+rustyping's binary will be installed to Cargo's binary directory (e.g., `~/.cargo/bin/rp`). You can use the command `rp` to launch rustyping. Note that programs on Linux require the CAP_NET_RAW capability to be able to open raw sockets as an non-root user. The command below gives rustyping's binary this capability.
 
 ```shell
 sudo setcap cap_net_raw=+eip $(which rp)
