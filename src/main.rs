@@ -1,29 +1,50 @@
 #![feature(destructuring_assignment)]
 #[macro_use]
 extern crate slog;
+use std::{
+    net::{IpAddr, ToSocketAddrs},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
+    thread,
+    time::{Duration, Instant},
+};
+
 use ansi_term::Color;
 use clap::{value_t_or_exit, Arg};
 use hsl::HSL;
-use pnet::packet::icmp::{echo_reply, echo_request, IcmpTypes};
-use pnet::packet::icmpv6::{Icmpv6Types, MutableIcmpv6Packet};
-use pnet::packet::ip::IpNextHeaderProtocols;
-use pnet::packet::Packet;
-use pnet::transport::TransportChannelType::Layer4;
-use pnet::transport::TransportProtocol::{Ipv4, Ipv6};
-use pnet::transport::{
-    icmp_packet_iter, icmpv6_packet_iter, transport_channel, TransportReceiver, TransportSender,
+use pnet::{
+    packet::{
+        icmp::{echo_reply, echo_request, IcmpTypes},
+        icmpv6::{Icmpv6Types, MutableIcmpv6Packet},
+        ip::IpNextHeaderProtocols,
+        Packet,
+    },
+    transport::{
+        icmp_packet_iter, icmpv6_packet_iter, transport_channel,
+        TransportChannelType::Layer4,
+        TransportProtocol::{Ipv4, Ipv6},
+        TransportReceiver, TransportSender,
+    },
 };
 use rand::random;
 use slog::Drain;
-use std::net::{IpAddr, ToSocketAddrs};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
-use std::thread;
-use std::time::{Duration, Instant};
 
 /// use ansi_term to color the rtt value and returns
-///   the colored value as a string
-fn paint_rtt(rtt: u128) -> String {
+/// the colored value as a string
+///
+/// # Arguments
+///
+/// * `rtt` - the round trip time value to be painted
+///
+/// # Examples
+///
+/// ```
+/// paint_rtt(30_u128)
+/// ```
+fn paint_rtt(rtt: u128) -> String
+{
     // calculate hue value from latency
     // 0ms == 0° (green), 100ms == 100° (red)
     let hue = (100.0 - rtt as f64 / (1000.0 * 100.0) * 100.0) as f64;
@@ -42,20 +63,46 @@ fn paint_rtt(rtt: u128) -> String {
         color
             .paint(format!("{:.5}", (rtt as f64 / 1000.0).to_string()))
             .to_string()
-    } else {
+    }
+    else {
         color.paint((rtt / 1000).to_string()).to_string()
     }
 }
 
 /// send ICMP/ICMPv6 echo request to an address and return the RTT if a response is received
 /// if no responses are received, return Ok(None)
+///
+/// # Arguments
+///
+/// * `address` - IPv4 or IPv6 address to ping
+/// * `timeout` - ICMP echo receival timeout
+/// * `size` - ICMP echo data size
+/// * `sequence` - ICMP echo sequence number
+/// * `identifier` - ICMP echo identifier
+///
+/// # Errors
+///
+/// std::io::Error if packets cannot be sent
+///
+/// # Examples
+///
+/// ```
+/// ping(
+///     std::net::Ipv4Addr::new(1, 1, 1, 1),
+///     time::Duration::new(1, 0),
+///     64,
+///     rand::random::<u16>(),
+///     random::<u16>(),
+/// )
+/// ```
 fn ping(
     address: IpAddr,
     timeout: f64,
     size: usize,
     sequence: u16,
     identifier: u16,
-) -> Result<Option<Duration>, std::io::Error> {
+) -> Result<Option<Duration>, std::io::Error>
+{
     // allocate space for packet
     let mut packet_buffer: Vec<u8> = vec![0; size];
     let mut sender: TransportSender;
@@ -74,7 +121,8 @@ fn ping(
         sender.send_to(packet, address).unwrap();
 
     // if the target address is an IPv6 address
-    } else {
+    }
+    else {
         let mut packet = MutableIcmpv6Packet::new(&mut packet_buffer[..]).unwrap();
         packet.set_icmpv6_type(Icmpv6Types::EchoRequest);
         (sender, receiver) =
@@ -108,7 +156,8 @@ fn ping(
 
                         // this should not happen
                         // we have not sent a packet with a greater sequence number yet
-                        } else if reply.get_identifier() == identifier
+                        }
+                        else if reply.get_identifier() == identifier
                             && reply.get_sequence_number() >= sequence
                         {
                             panic!("got impossible sequence number")
@@ -121,14 +170,16 @@ fn ping(
             // set (timeout = timeout - elapsed time) and listen for another packet
             if Instant::now().duration_since(sent_time) > Duration::from_secs_f64(timeout) {
                 return Ok(None);
-            } else {
+            }
+            else {
                 loop_timeout =
                     Duration::from_secs_f64(timeout) - Instant::now().duration_since(sent_time)
             }
         }
 
     // ICMPv6
-    } else {
+    }
+    else {
         let mut receiver_iterator = icmpv6_packet_iter(&mut receiver);
         loop {
             // get data from receiver
@@ -146,7 +197,8 @@ fn ping(
 
             if Instant::now().duration_since(sent_time) > Duration::from_secs_f64(timeout) {
                 return Ok(None);
-            } else {
+            }
+            else {
                 loop_timeout =
                     Duration::from_secs_f64(timeout) - Instant::now().duration_since(sent_time)
             }
@@ -154,7 +206,9 @@ fn ping(
     }
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// program entry point
+fn main() -> Result<(), Box<dyn std::error::Error>>
+{
     // initialize logger
     let decorator = slog_term::TermDecorator::new().build();
     let drain = Mutex::new(slog_term::FullFormat::new(decorator).build()).fuse();
@@ -271,7 +325,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if rtt < current_min {
                         min = Some(rtt)
                     }
-                } else {
+                }
+                else {
                     min = Some(rtt)
                 }
 
@@ -281,7 +336,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     if rtt > current_max {
                         max = Some(rtt)
                     }
-                } else {
+                }
+                else {
                     max = Some(rtt)
                 }
 
@@ -320,7 +376,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // calculate %loss
     let loss = if transmitted == 0 {
         100.0
-    } else {
+    }
+    else {
         ((transmitted - received) as f64 / transmitted as f64) * 100.0
     };
 
@@ -345,7 +402,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let avg = if sequence == 0 {
         0
-    } else {
+    }
+    else {
         total_rtt.as_micros() / sequence as u128
     };
 
