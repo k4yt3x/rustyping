@@ -216,9 +216,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
 
     // parse command line arguments
     let matches = clap::App::new("rustyping")
-        .version("0.1.0")
+        .version("2.1.0")
         .author("K4YT3X <k4yt3x@k4yt3x.com>")
-        .about("A prettier ping utility written in Rust")
+        .about("A prettier lightweight colored ping utility written in Rust")
         .arg(
             Arg::with_name("destination")
                 .value_name("DESTINATION")
@@ -267,13 +267,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
         Ok(address) => address,
 
         // address is invalid, try to resolve destination into IpAddr
-        Err(_e) => {
-            let resolved = (destination, 0).to_socket_addrs().unwrap().next();
-            match resolved {
-                None => panic!("unable to resolve destination hostname"),
-                Some(resolved) => resolved.ip(),
+        Err(_e) => match (destination, 0).to_socket_addrs() {
+            // hostname has been resolved successfully
+            Ok(mut resolve_result) => {
+                if let Some(resolve) = resolve_result.next() {
+                    // final result
+                    resolve.ip()
+                }
+                // empty resolution result
+                else {
+                    panic!("the resolver has returned an invalid result")
+                }
             }
-        }
+            // failed to resolve
+            Err(_error) => {
+                crit!(log, "unable to resolve destination hostname");
+                // returning an Err will result in rust printing an extra error message
+                // return Err(Box::new(error));
+                std::process::exit(1);
+            }
+        },
     };
 
     // check if flooding is possible

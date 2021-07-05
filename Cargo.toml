@@ -3,7 +3,7 @@ cargo-features = ["strip"]
 [package]
 authors = ["k4yt3x@k4yt3x.com"]
 categories = ["command-line-utilities"]
-description = "A prettier lightweight ping utility written in Rust"
+description = "A prettier lightweight colored ping utility written in Rust"
 edition = "2018"
 homepage = "https://github.com/k4yt3x/rustyping"
 keywords = ["networking", "ping"]
@@ -11,7 +11,7 @@ license = "GPL-3.0-or-later"
 name = "rustyping"
 readme = "README.md"
 repository = "https://github.com/k4yt3x/rustyping"
-version = "2.0.0"
+version = "2.1.0"
 
 [features]
 unrestricted = []
