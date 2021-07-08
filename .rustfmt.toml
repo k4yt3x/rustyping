@@ -1,0 +1,32 @@
+# Name: rustfmt config
+# Author: K4YT3X
+# Date Created: June 29, 2021
+# Last Modified: June 29, 2021
+# Docs: https://rust-lang.github.io/rustfmt/
+
+# general
+edition = "2018"
+max_width = 100
+
+# new line
+brace_style = "AlwaysNextLine"
+control_brace_style = "ClosingNextLine"
+
+# structs
+struct_lit_single_line = false
+
+# import
+group_imports = "StdExternalCrate"
+imports_granularity = "Crate"
+#imports_layout = "Vertical"
+
+# automatic optimization
+condense_wildcard_suffixes = true
+format_code_in_doc_comments = true
+reorder_impl_items = true
+use_field_init_shorthand = true
+use_try_shorthand = true
+
+# report FIXME and TODO
+report_fixme = "Always"
+report_todo = "Always"
