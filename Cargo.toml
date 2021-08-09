@@ -11,7 +11,7 @@ license = "GPL-3.0-or-later"
 name = "rustyping"
 readme = "README.md"
 repository = "https://github.com/k4yt3x/rustyping"
-version = "2.1.0"
+version = "2.2.0"
 
 [features]
 unrestricted = []
