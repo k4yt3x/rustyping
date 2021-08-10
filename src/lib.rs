@@ -50,7 +50,6 @@ impl Config
         timeout: f64,
     ) -> Option<Config>
     {
-
         if interval < 0.0 {
             crit!(logger, "the value of 'interval' cannot be negative");
             return None;
@@ -306,6 +305,31 @@ fn ping(
     }
 }
 
+/// send ping requests in a loop and print the stats
+///
+/// # Arguments
+///
+/// * `config` - configs saved in a Config struct
+///
+/// # Errors
+///
+/// any error that implements the Error trait
+///
+/// # Examples
+///
+/// ```
+/// run(Config::new(
+///     {
+///         let decorator = slog_term::TermDecorator::new().build();
+///         let drain = Mutex::new(slog_term::FullFormat::new(decorator).build()).fuse();
+///         slog::Logger::root(drain, o!())
+///     },
+///     "1.1.1.1",
+///     4_u16,
+///     1.0_f64,
+///     1.0_f64,
+/// ))
+/// ```
 pub fn run(config: Config) -> Result<(), Box<dyn Error>>
 {
     // declare/initialize internal metric variables for the ping summary
