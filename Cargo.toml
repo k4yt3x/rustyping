@@ -1,7 +1,5 @@
-cargo-features = ["strip"]
-
 [package]
-authors = ["k4yt3x@k4yt3x.com"]
+authors = ["i@k4yt3x.com"]
 categories = ["command-line-utilities"]
 description = "A prettier lightweight colored ping utility written in Rust"
 edition = "2018"
