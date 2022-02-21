@@ -1,4 +1,3 @@
-#![feature(destructuring_assignment)]
 #[macro_use]
 extern crate slog;
 use std::{
