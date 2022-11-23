@@ -13,19 +13,17 @@ use std::{
 
 use ansi_term::Color;
 use hsl::HSL;
-use pnet::{
-    packet::{
-        icmp::{echo_reply, echo_request, IcmpTypes},
-        icmpv6::{Icmpv6Types, MutableIcmpv6Packet},
-        ip::IpNextHeaderProtocols,
-        Packet,
-    },
-    transport::{
-        icmp_packet_iter, icmpv6_packet_iter, transport_channel,
-        TransportChannelType::Layer4,
-        TransportProtocol::{Ipv4, Ipv6},
-        TransportReceiver, TransportSender,
-    },
+use pnet::packet::{
+    icmp::{echo_reply, echo_request, IcmpTypes},
+    icmpv6::{Icmpv6Types, MutableIcmpv6Packet},
+    ip::IpNextHeaderProtocols,
+    Packet,
+};
+use pnet_transport::{
+    icmp_packet_iter, icmpv6_packet_iter, transport_channel,
+    TransportChannelType::Layer4,
+    TransportProtocol::{Ipv4, Ipv6},
+    TransportReceiver, TransportSender,
 };
 use rand::random;
 
@@ -33,7 +31,8 @@ use rand::random;
 pub struct Config
 {
     logger: slog::Logger,
-    destination: IpAddr,
+    destination: String,
+    destination_ip: IpAddr,
     count: u16,
     interval: f64,
     timeout: f64,
@@ -72,8 +71,14 @@ impl Config
         }
 
         // resolve destination String into IpAddr
-        let destination = match Config::resolve_hostname(destination) {
-            Ok(destination) => destination,
+        let destination_ip = match Config::resolve_hostname(destination.clone()) {
+            Ok(destination_ip) => {
+                info!(
+                    logger,
+                    "PING {} ({}), 56(84) bytes of data.", destination, destination_ip
+                );
+                destination_ip
+            }
             Err(error) => {
                 crit!(logger, "{}", error);
                 return None;
@@ -83,6 +88,7 @@ impl Config
         Some(Config {
             logger,
             destination,
+            destination_ip,
             count,
             interval,
             timeout,
@@ -164,8 +170,11 @@ fn paint_rtt(rtt: u128) -> String
             .paint(format!("{:.5}", (rtt as f64 / 1000.0).to_string()))
             .to_string()
     }
+    // if RTT is greater than 1ms, show one digit after the decimal point
     else {
-        color.paint((rtt / 1000).to_string()).to_string()
+        color
+            .paint(format!("{:.4}", (rtt as f64 / 1000.0).to_string()))
+            .to_string()
     }
 }
 
@@ -348,6 +357,8 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>>
     // upon receiving ^C, set running to false
     ctrlc::set_handler(move || {
         running_clone.store(false, Ordering::SeqCst);
+        // print a \n after ^C to prevent it breaking a line
+        println!();
     })
     .expect("error setting Ctrl-C handler");
 
@@ -357,7 +368,13 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>>
         let cycle_begin_time = Instant::now();
 
         // send one echo request and get the RTT value
-        let rtt = match ping(config.destination, config.timeout, 64, sequence, identifier) {
+        let rtt = match ping(
+            config.destination_ip,
+            config.timeout,
+            64,
+            sequence,
+            identifier,
+        ) {
             Ok(rtt) => rtt,
             Err(error) => {
                 crit!(config.logger, "{}", error);
@@ -365,11 +382,16 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>>
             }
         };
 
+        // do not print the current result is ^C has been pressed
+        if !running.load(Ordering::SeqCst) {
+            break;
+        }
+
         match rtt {
             None => {
                 warn!(
                     config.logger,
-                    "no answer from {} seq={}", config.destination, sequence
+                    "no answer from {} seq={}", config.destination_ip, sequence
                 );
             }
             Some(rtt) => {
@@ -398,7 +420,7 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>>
                 info!(
                     config.logger,
                     "answer from {} seq={} rtt={}ms",
-                    config.destination,
+                    config.destination_ip,
                     sequence,
                     paint_rtt(rtt.as_micros())
                 );
@@ -427,7 +449,7 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>>
         "{}",
         Color::Fixed(240)
             .bold()
-            .paint(format!("{} ping statistics", config.destination))
+            .paint(format!("--- {} ping statistics ---", config.destination))
     );
 
     // calculate %loss

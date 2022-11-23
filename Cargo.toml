@@ -2,14 +2,14 @@
 authors = ["i@k4yt3x.com"]
 categories = ["command-line-utilities"]
 description = "A prettier lightweight colored ping utility written in Rust"
-edition = "2018"
+edition = "2021"
 homepage = "https://github.com/k4yt3x/rustyping"
 keywords = ["networking", "ping"]
 license = "GPL-3.0-or-later"
 name = "rustyping"
 readme = "README.md"
 repository = "https://github.com/k4yt3x/rustyping"
-version = "2.2.0"
+version = "2.3.0"
 
 [features]
 unrestricted = []
@@ -23,11 +23,12 @@ strip = "symbols"
 
 [dependencies]
 ansi_term = "0.12"
-clap = "2"
-ctrlc = { version = "3.1", features = ["termination"] }
+clap = { version = "4.0", features = ["derive"] }
+ctrlc = { version = "3.2", features = ["termination"] }
 hsl = "0.1"
-nix = "0.21"
-pnet = "0.28"
+nix = "0.25"
+pnet = "0.31"
+pnet_transport = "0.31"
 rand = "0.8"
 slog = "2.7"
-slog-term = "2.8"
+slog-term = "2.9"

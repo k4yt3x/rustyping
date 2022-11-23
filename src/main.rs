@@ -2,9 +2,31 @@
 extern crate slog;
 use std::{process, sync::Mutex};
 
-use clap::{value_t_or_exit, Arg};
+use clap::Parser;
 use rustyping::{run, Config};
 use slog::Drain;
+
+/// A prettier lightweight colored ping utility written in Rust
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct Args
+{
+    /// dns name or ip address
+    #[arg(index = 1)]
+    destination: String,
+
+    /// stop after <count> replies
+    #[arg(short = 'c', long, default_value_t = 0)]
+    count: u16,
+
+    /// seconds between sending each packet
+    #[arg(short = 'i', long, default_value_t = 1.0)]
+    interval: f64,
+
+    /// time to wait for response
+    #[arg(short = 'W', long, default_value_t = 2.0)]
+    timeout: f64,
+}
 
 /// parse command line arguments into a Config struct
 ///
@@ -13,46 +35,7 @@ use slog::Drain;
 /// anything that implements the Error trait
 fn parse() -> Option<Config>
 {
-    // parse command line arguments
-    let matches = clap::App::new("rustyping")
-        .version("2.2.0")
-        .author("K4YT3X <k4yt3x@k4yt3x.com>")
-        .about("A prettier lightweight colored ping utility written in Rust")
-        .arg(
-            Arg::with_name("destination")
-                .value_name("DESTINATION")
-                .help("dns name or ip address")
-                .required(true)
-                .index(1),
-        )
-        .arg(
-            Arg::with_name("count")
-                .short("c")
-                .long("count")
-                .value_name("COUNT")
-                .help("stop after <count> replies")
-                .default_value("0")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("interval")
-                .short("i")
-                .long("interval")
-                .value_name("INTERVAL")
-                .help("seconds between sending each packet")
-                .default_value("1.0")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("timeout")
-                .short("W")
-                .long("timeout")
-                .value_name("TIMEOUT")
-                .help("time to wait for response")
-                .default_value("2.0")
-                .takes_value(true),
-        )
-        .get_matches();
+    let args = Args::parse();
 
     // assign command line values to variables
     Config::new(
@@ -61,10 +44,10 @@ fn parse() -> Option<Config>
             let drain = Mutex::new(slog_term::FullFormat::new(decorator).build()).fuse();
             slog::Logger::root(drain, o!())
         },
-        matches.value_of("destination").unwrap().to_owned(),
-        value_t_or_exit!(matches.value_of("count"), u16),
-        value_t_or_exit!(matches.value_of("interval"), f64),
-        value_t_or_exit!(matches.value_of("timeout"), f64),
+        args.destination,
+        args.count,
+        args.interval,
+        args.timeout,
     )
 }
 
