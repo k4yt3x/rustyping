@@ -167,13 +167,13 @@ fn paint_rtt(rtt: u128) -> String
     // if RTT is less than 1ms, show three digits after the decimal point
     if rtt < 1000 {
         color
-            .paint(format!("{:.5}", (rtt as f64 / 1000.0).to_string()))
+            .paint(format!("{:.3}", rtt as f64 / 1000.0))
             .to_string()
     }
     // if RTT is greater than 1ms, show one digit after the decimal point
     else {
         color
-            .paint(format!("{:.4}", (rtt as f64 / 1000.0).to_string()))
+            .paint(format!("{:.1}", rtt as f64 / 1000.0))
             .to_string()
     }
 }
