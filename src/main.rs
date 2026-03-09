@@ -9,8 +9,7 @@ use slog::Drain;
 /// A prettier lightweight colored ping utility written in Rust
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
-struct Args
-{
+struct Args {
     /// dns name or ip address
     #[arg(index = 1)]
     destination: String,
@@ -20,11 +19,11 @@ struct Args
     count: u16,
 
     /// seconds between sending each packet
-    #[arg(short = 'i', long, default_value_t = 1.0)]
+    #[arg(short = 'i', long, default_value_t = 0.0)]
     interval: f64,
 
     /// time to wait for response
-    #[arg(short = 'W', long, default_value_t = 2.0)]
+    #[arg(short = 'W', long, default_value_t = 0.5)]
     timeout: f64,
 }
 
@@ -33,8 +32,7 @@ struct Args
 /// # Errors
 ///
 /// anything that implements the Error trait
-fn parse() -> Option<Config>
-{
+fn parse() -> Option<Config> {
     let args = Args::parse();
 
     // assign command line values to variables
@@ -52,8 +50,7 @@ fn parse() -> Option<Config>
 }
 
 /// program entry point
-fn main()
-{
+fn main() {
     // parse command line arguments into Config
     if let Some(config) = parse() {
         // run ping with config
@@ -61,8 +58,7 @@ fn main()
             Ok(_) => 0,
             Err(_) => 1,
         })
-    }
-    else {
+    } else {
         process::exit(1);
     }
 }

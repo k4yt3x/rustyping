@@ -9,26 +9,28 @@ license = "GPL-3.0-or-later"
 name = "rustyping"
 readme = "README.md"
 repository = "https://github.com/k4yt3x/rustyping"
-version = "2.3.1"
-
-[features]
-unrestricted = []
+version = "2.4.0"
 
 [[bin]]
 name = "rp"
 path = "src/main.rs"
 
-[profile.release]
-strip = "symbols"
+[features]
+unrestricted = []
 
 [dependencies]
 ansi_term = "0.12"
-clap = { version = "4.0", features = ["derive"] }
-ctrlc = { version = "3.2", features = ["termination"] }
+clap = { version = "4.5", features = ["derive"] }
+ctrlc = { version = "3.5", features = ["termination"] }
 hsl = "0.1"
-nix = "0.25"
-pnet = "0.31"
-pnet_transport = "0.31"
-rand = "0.8"
-slog = "2.7"
+nix = { version = "0.31", features = ["user"] }
+pnet = "0.35"
+pnet_transport = "0.35"
+rand = "0.9"
+slog = "2.8"
 slog-term = "2.9"
+
+[profile.release]
+strip = "symbols"
+lto = "fat"
+codegen-units = 1

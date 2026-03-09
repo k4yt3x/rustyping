@@ -28,8 +28,7 @@ use pnet_transport::{
 use rand::random;
 
 /// configs passed to the run function
-pub struct Config
-{
+pub struct Config {
     logger: slog::Logger,
     destination: String,
     destination_ip: IpAddr,
@@ -38,16 +37,14 @@ pub struct Config
     timeout: f64,
 }
 
-impl Config
-{
+impl Config {
     pub fn new(
         logger: slog::Logger,
         destination: String,
         count: u16,
         mut interval: f64,
         timeout: f64,
-    ) -> Option<Config>
-    {
+    ) -> Option<Config> {
         if interval < 0.0 {
             crit!(logger, "the value of 'interval' cannot be negative");
             return None;
@@ -110,8 +107,7 @@ impl Config
     /// ```
     /// let ip = resolve_hostname("evnk.io")?;
     /// ```
-    fn resolve_hostname(hostname: String) -> Result<IpAddr, Box<dyn Error>>
-    {
+    fn resolve_hostname(hostname: String) -> Result<IpAddr, Box<dyn Error>> {
         // check if destination is a valid IP address
         match hostname.parse::<IpAddr>() {
             // address is valid, use this address
@@ -149,8 +145,7 @@ impl Config
 /// ```
 /// paint_rtt(30_u128)
 /// ```
-fn paint_rtt(rtt: u128) -> String
-{
+fn paint_rtt(rtt: u128) -> String {
     // calculate hue value from latency
     // 0ms == 0° (green), 100ms == 100° (red)
     let hue = (100.0 - rtt as f64 / (1000.0 * 100.0) * 100.0) as f64;
@@ -210,8 +205,7 @@ fn ping(
     size: usize,
     sequence: u16,
     identifier: u16,
-) -> Result<Option<Duration>, std::io::Error>
-{
+) -> Result<Option<Duration>, std::io::Error> {
     // allocate space for packet
     let mut packet_buffer: Vec<u8> = vec![0; size];
     let mut sender: TransportSender;
@@ -229,8 +223,7 @@ fn ping(
         sender.send_to(packet, address)?;
 
     // if the target address is an IPv6 address
-    }
-    else {
+    } else {
         let mut packet = MutableIcmpv6Packet::new(&mut packet_buffer[..]).unwrap();
         packet.set_icmpv6_type(Icmpv6Types::EchoRequest);
         (sender, receiver) = transport_channel(size, Layer4(Ipv6(IpNextHeaderProtocols::Icmpv6)))?;
@@ -263,8 +256,7 @@ fn ping(
 
                         // this should not happen
                         // we have not sent a packet with a greater sequence number yet
-                        }
-                        else if reply.get_identifier() == identifier
+                        } else if reply.get_identifier() == identifier
                             && reply.get_sequence_number() >= sequence
                         {
                             panic!("got impossible sequence number")
@@ -275,18 +267,17 @@ fn ping(
 
             // if the amount of time elapsed has yet exceeded the specified timeout
             // set (timeout = timeout - elapsed time) and listen for another packet
-            if Instant::now().duration_since(sent_time) > Duration::from_secs_f64(timeout) {
+            let elapsed = Instant::now().duration_since(sent_time);
+            let timeout_duration = Duration::from_secs_f64(timeout);
+            if elapsed > timeout_duration {
                 return Ok(None);
-            }
-            else {
-                loop_timeout =
-                    Duration::from_secs_f64(timeout) - Instant::now().duration_since(sent_time)
+            } else {
+                loop_timeout = timeout_duration.saturating_sub(elapsed);
             }
         }
 
     // ICMPv6
-    }
-    else {
+    } else {
         let mut receiver_iterator = icmpv6_packet_iter(&mut receiver);
         loop {
             // get data from receiver
@@ -302,12 +293,12 @@ fn ping(
                 }
             }
 
-            if Instant::now().duration_since(sent_time) > Duration::from_secs_f64(timeout) {
+            let elapsed = Instant::now().duration_since(sent_time);
+            let timeout_duration = Duration::from_secs_f64(timeout);
+            if elapsed > timeout_duration {
                 return Ok(None);
-            }
-            else {
-                loop_timeout =
-                    Duration::from_secs_f64(timeout) - Instant::now().duration_since(sent_time)
+            } else {
+                loop_timeout = timeout_duration.saturating_sub(elapsed);
             }
         }
     }
@@ -338,8 +329,7 @@ fn ping(
 ///     1.0_f64,
 /// ))
 /// ```
-pub fn run(config: Config) -> Result<(), Box<dyn Error>>
-{
+pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     // declare/initialize internal metric variables for the ping summary
     let identifier = random::<u16>();
     let mut sequence: u16 = 0;
@@ -401,8 +391,7 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>>
                     if rtt < current_min {
                         min = Some(rtt)
                     }
-                }
-                else {
+                } else {
                     min = Some(rtt)
                 }
 
@@ -412,8 +401,7 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>>
                     if rtt > current_max {
                         max = Some(rtt)
                     }
-                }
-                else {
+                } else {
                     max = Some(rtt)
                 }
 
@@ -433,13 +421,10 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>>
         sequence += 1;
 
         // if current time - elapsed time < interval, wait until interval is reached
-        if Instant::now().duration_since(cycle_begin_time)
-            < Duration::from_secs_f64(config.interval)
-        {
-            thread::sleep(
-                Duration::from_secs_f64(config.interval)
-                    - Instant::now().duration_since(cycle_begin_time),
-            )
+        let elapsed = Instant::now().duration_since(cycle_begin_time);
+        let interval_duration = Duration::from_secs_f64(config.interval);
+        if elapsed < interval_duration {
+            thread::sleep(interval_duration.saturating_sub(elapsed));
         }
     }
 
@@ -455,8 +440,7 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>>
     // calculate %loss
     let loss = if transmitted == 0 {
         100.0
-    }
-    else {
+    } else {
         ((transmitted - received) as f64 / transmitted as f64) * 100.0
     };
 
@@ -481,8 +465,7 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>>
 
     let avg = if sequence == 0 {
         0
-    }
-    else {
+    } else {
         total_rtt.as_micros() / sequence as u128
     };
 
